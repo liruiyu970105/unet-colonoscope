@@ -1,9 +1,13 @@
 from data import *
 from model import *
+import tensorflow as tf
+import keras.backend.tensorflow_backend as KTF
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"
-
-
+os.environ["CUDA_VISIBLE_DEVICES"] = "1,2,3"
+config = tf.ConfigProto()
+config.gpu_options.per_process_gpu_memory_fraction = 0.6 
+session = tf.Session(config=config)
+KTF.set_session(session)
 
 data_gen_args = dict(rotation_range=0.2,
                      width_shift_range=0.05,
@@ -14,7 +18,7 @@ data_gen_args = dict(rotation_range=0.2,
                      fill_mode='nearest')
 
 # Train with data generator
-# 以batch_size=2的速率无限生成增强后的数据
+# generate the augumented image data as the rate of batch_size=2 undefinitely
 myGene = trainGenerator(1, 'data/tissue-train-pos0/', 'image', 'mask', data_gen_args)
 print('\n\n^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n')
 model = unet()
@@ -39,8 +43,8 @@ print('=========================== generating test data ========================
 
 # test your model and save predicted results
 testGene = testGenerator("data/tissue-train-pos/")
+print('---------------------------predicting the test results-------------------------------------')
 results = model.predict_generator(testGene, steps=10, verbose=1)
-# steps: 在停止之前，来自 generator 的总步数 (样本批次)
 # predict_generator(
 #     generator,
 #     steps=None,

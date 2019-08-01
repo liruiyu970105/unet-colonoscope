@@ -40,7 +40,6 @@ def adjustData(img, mask, flag_multi_class, num_class):
         img = img / 255
         mask = mask[:, :, :, 0] if(len(mask.shape) == 4) else mask[:, :, 0]
         new_mask = np.zeros(mask.shape + (num_class,))
-        # 将数据厚度扩展到num_class层，以在层的方向实现one - hot结构
         for i in range(num_class):
             # for one pixel in the image, find the class in mask and convert it
             # into one-hot vector
@@ -57,7 +56,7 @@ def adjustData(img, mask, flag_multi_class, num_class):
              new_mask.shape[2]))
         mask = new_mask
     elif np.max(img) > 1:
-        # 对数据和标签的像素值进行归一化
+    
         # global count
         # count += 1
         img = img / 255
@@ -77,7 +76,7 @@ def trainGenerator(
         mask_color_mode="grayscale",
         flag_multi_class=False,
         num_class=2,
-        target_size=(3072, 3072),
+        target_size=(None,None),
         seed=1):
     '''
     can generate image and mask at the same time
@@ -105,31 +104,34 @@ def trainGenerator(
         batch_size=batch_size,
         seed=seed)
     print('------------------------mask generator------------------------')
+    
     train_generator = zip(image_generator, mask_generator)
-    print(train_generator)
-    print('@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@')
-    # 由于batch是2，所以一次返回两张，即img是一个2张灰度图片的数组，(samples, height, width, channels)
+    #print(train_generator)
+    print('@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@')
+    # (samples, height, width, channels)
     for img, mask in train_generator:
+        print('\n\n--------------------start data augmentation------------------------------')
         img, mask = adjustData(img, mask, flag_multi_class, num_class)
+        print('========================finished data autmentation====================================')
         yield img, mask
 
 
 def testGenerator(
         test_path,
-        target_size=(3072, 3072),
+        #target_size=(3072, 3072),
         flag_multi_class=False,
         as_gray=False):
     print('\n\n\n--------------------testGenerator-----------------------------------------')
     img_mask_list = os.listdir('./data/tissue-test-pos0/')
-    img_list = []
+    #img_list = []
     for item in img_mask_list:
         if re.match('.*mask.jpg', item):
+            print(item)
             pass
         else:
             img = io.imread(item, as_gray=as_gray)
             img = img / 255
-            img = trans.resize(img, target_size)
-            # 将测试图片扩展一个维度，与训练时的输入[2,256,256]保持一致
+            #img = trans.resize(img, target_size)
             img = np.reshape(img, (1,) + img.shape)
             yield img
 
@@ -137,8 +139,6 @@ def testGenerator(
 # create .npy data
 # If your computer has enough memory, you can create npy files containing
 # all your images and masks, and feed your DNN with them.
-# 该函数主要是分别在训练集文件夹下和标签文件夹下搜索图片,
-# 然后扩展一个维度后以array的形式返回，是为了在没用数据增强时的读取文件夹内自带的数据
 def geneTrainNpy(
         image_path,
         mask_path,
@@ -188,7 +188,6 @@ def labelVisualize(num_class, color_dict, img):
 
 def saveResult(save_path, npyfile, flag_multi_class=False, num_class=2):
     for i, item in enumerate(npyfile):
-        # 多类multi_class的话就图成彩色，非多类（两类）的话就是黑白色
         img = labelVisualize(num_class, COLOR_DICT,
                              item) if flag_multi_class else item[:, :, 0]
         io.imsave(os.path.join(save_path, "%d_predict.png" % i), img)
